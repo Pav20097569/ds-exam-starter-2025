@@ -16,6 +16,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     const role = event.pathParameters?.role;
     const movieId = event.pathParameters?.movieId;
+    const verbose = event.queryStringParameters?.verbose === "true";
 
     if (!role || !movieId) {
       return {
@@ -43,12 +44,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     }
 
     const crew = movie.crew || [];
-    const crewMember = crew.find((member: any) => member.role === role);
+
+    const responseBody = verbose
+      ? crew
+      : crew.find((member: any) => member.role === role) || {};
 
     return {
       statusCode: 200,
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(crewMember || {}),
+      body: JSON.stringify(responseBody),
     };
   } catch (error: any) {
     console.error("Error:", JSON.stringify(error));
@@ -59,6 +63,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     };
   }
 };
+
 
 function createDDbDocClient() {
   const ddbClient = new DynamoDBClient({ region: process.env.REGION });
