@@ -117,7 +117,16 @@ export class ExamStack extends cdk.Stack {
     // === Part A Connections ===
 
     // Subscribe Queue A to Topic 1
-    topic1.addSubscription(new subs.SqsSubscription(queueA));
+    topic1.addSubscription(
+      new subs.SqsSubscription(queueA, {
+        filterPolicy: {
+          "address.country": sns.SubscriptionFilter.stringFilter({
+            allowlist: ["Ireland", "China"],
+          }),
+        },
+        rawMessageDelivery: true,
+      })
+    );
 
     // Allow Lambda X to consume messages from Queue A
     queueA.grantConsumeMessages(lambdaXFn);
