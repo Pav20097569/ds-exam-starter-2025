@@ -37,7 +37,7 @@ export class ExamStack extends cdk.Stack {
       memorySize: 128,
       environment: {
         TABLE_NAME: table.tableName,
-        REGION: "eu-west-1",
+        REGION: "us-east-1",
       },
     });
 
