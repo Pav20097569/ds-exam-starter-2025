@@ -98,7 +98,7 @@ export class ExamStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       memorySize: 128,
       environment: {
-        REGION: "eu-west-1",
+        REGION: "us-east-1",
         QUEUE_B_URL: queueB.queueUrl,
       },
     });
@@ -110,23 +110,42 @@ export class ExamStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       memorySize: 128,
       environment: {
-        REGION: "eu-west-1",
+        REGION: "us-east-1",
       },
     });
 
-    // === Part A Connections ===
+    // === Part C Connections ===
 
-    // Subscribe Queue A to Topic 1
-    topic1.addSubscription(
-      new subs.SqsSubscription(queueA, {
-        filterPolicy: {
-          "address.country": sns.SubscriptionFilter.stringFilter({
-            allowlist: ["Ireland", "China"],
-          }),
-        },
-        rawMessageDelivery: true,
-      })
-    );
+  // Subscribe Queue A to messages from Ireland or China that have an email
+  topic1.addSubscription(
+    new subs.SqsSubscription(queueA, {
+      filterPolicy: {
+        "address.country": sns.SubscriptionFilter.stringFilter({
+          allowlist: ["Ireland", "China"],
+        }),
+        hasEmail: sns.SubscriptionFilter.stringFilter({
+          allowlist: ["true"],
+        }),
+      },
+      rawMessageDelivery: true,
+    })
+  );
+
+  // Subscribe Queue B to messages from Ireland or China that do NOT have an email
+  topic1.addSubscription(
+    new subs.SqsSubscription(queueB, {
+      filterPolicy: {
+        "address.country": sns.SubscriptionFilter.stringFilter({
+          allowlist: ["Ireland", "China"],
+        }),
+        hasEmail: sns.SubscriptionFilter.stringFilter({
+          allowlist: ["false"],
+        }),
+      },
+      rawMessageDelivery: true,
+    })
+  );
+
 
     // Allow Lambda X to consume messages from Queue A
     queueA.grantConsumeMessages(lambdaXFn);
