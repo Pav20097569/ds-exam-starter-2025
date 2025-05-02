@@ -5,5 +5,8 @@ import { ExamStack } from '../lib/exam-stack';
 
 const app = new cdk.App();
 new ExamStack(app, 'ExamStack', {
-  env: { region: 'eu-west-1' },
+  env: { 
+    region: 'us-east-1',
+  
+  },
 });
