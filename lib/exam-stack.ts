@@ -18,9 +18,8 @@ export class ExamStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Question 1 - Serverless REST API
+    // === Question 1 - REST API ===
 
-    // A table that stores data about a movie's crew, i.e. director, camera operators, etc.
     const table = new dynamodb.Table(this, "MoviesTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
@@ -50,7 +49,7 @@ export class ExamStack extends cdk.Stack {
             [table.tableName]: generateBatch(movieCrew),
           },
         },
-        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
+        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"),
       },
       policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
         resources: [table.tableArn],
@@ -72,11 +71,9 @@ export class ExamStack extends cdk.Stack {
 
     const anEndpoint = api.root.addResource("patha");
 
+    // === Question 2 - Event Driven Architecture ===
 
-    // ==================================
-    // Question 2 - Event-Driven architecture
-
-     const bucket = new s3.Bucket(this, "exam-bucket", {
+    const bucket = new s3.Bucket(this, "exam-bucket", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: false,
@@ -85,15 +82,15 @@ export class ExamStack extends cdk.Stack {
     const topic1 = new sns.Topic(this, "Topic1", {
       displayName: "Exam topic",
     });
-    
-    const queueB = new sqs.Queue(this, "QueueB", {
-      receiveMessageWaitTime: cdk.Duration.seconds(5),
-    });
 
     const queueA = new sqs.Queue(this, "queueA", {
       receiveMessageWaitTime: cdk.Duration.seconds(5),
     });
-    
+
+    const queueB = new sqs.Queue(this, "QueueB", {
+      receiveMessageWaitTime: cdk.Duration.seconds(5),
+    });
+
     const lambdaXFn = new lambdanode.NodejsFunction(this, "LambdaXFn", {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -102,6 +99,7 @@ export class ExamStack extends cdk.Stack {
       memorySize: 128,
       environment: {
         REGION: "eu-west-1",
+        QUEUE_B_URL: queueB.queueUrl,
       },
     });
 
@@ -115,7 +113,21 @@ export class ExamStack extends cdk.Stack {
         REGION: "eu-west-1",
       },
     });
-    
+
+    // === Part A Connections ===
+
+    // Subscribe Queue A to Topic 1
+    topic1.addSubscription(new subs.SqsSubscription(queueA));
+
+    // Allow Lambda X to consume messages from Queue A
+    queueA.grantConsumeMessages(lambdaXFn);
+
+    // Allow Lambda X to send messages to Queue B
+    queueB.grantSendMessages(lambdaXFn);
+
+    // Trigger Lambda X from Queue A
+    lambdaXFn.addEventSource(new events.SqsEventSource(queueA, {
+      batchSize: 10,
+    }));
   }
 }
-  
